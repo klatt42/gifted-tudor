@@ -22,10 +22,20 @@ import {
   CheckCircle,
   Trophy,
   Flame,
+  LogOut,
+  UserPlus,
 } from 'lucide-react';
 import type { Student, SubjectProgress, TodayAssignment } from '@/lib/types';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { type UserProfile } from '@/lib/db/users';
+import Link from 'next/link';
 
-// Demo data - will be replaced with real data from Supabase
+interface ParentDashboardProps {
+  initialStudents?: Student[];
+  userProfile?: UserProfile | null;
+}
+
+// Demo data - used when no real students exist
 const demoChildren: Student[] = [
   {
     id: '1',
@@ -227,9 +237,19 @@ const ProgressRing = ({
   );
 };
 
-export default function ParentDashboard() {
+export default function ParentDashboard({ initialStudents = [], userProfile }: ParentDashboardProps) {
+  const { signOut } = useAuth();
   const [selectedChild, setSelectedChild] = useState<Student | null>(null);
-  const children = demoChildren;
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Use real students if provided, fallback to demo data for preview
+  const children = initialStudents.length > 0 ? initialStudents : demoChildren;
+  const isUsingDemoData = initialStudents.length === 0;
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await signOut();
+  };
 
   // Calculate weekly progress (demo)
   const getWeeklyProgress = (student: Student) => {
@@ -264,17 +284,45 @@ export default function ParentDashboard() {
                 <Settings className="w-5 h-5" />
               </button>
               <div className="w-9 h-9 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center text-white font-medium">
-                P
+                {userProfile?.fullName?.charAt(0) || userProfile?.email?.charAt(0)?.toUpperCase() || 'P'}
               </div>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </header>
 
         {/* Child Selection */}
         <main className="max-w-7xl mx-auto px-6 py-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">Welcome back!</h2>
-            <p className="text-slate-600">Select a child to view their learning dashboard</p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                Welcome back{userProfile?.fullName ? `, ${userProfile.fullName.split(' ')[0]}` : ''}!
+              </h2>
+              <p className="text-slate-600">
+                {children.length > 0
+                  ? 'Select a child to view their learning dashboard'
+                  : 'Add your first student to get started'}
+              </p>
+              {isUsingDemoData && children.length > 0 && (
+                <p className="text-amber-600 text-sm mt-1">
+                  Showing demo data. Add students to see your real dashboard.
+                </p>
+              )}
+            </div>
+            <Link
+              href="/students/add"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              Add Student
+            </Link>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
